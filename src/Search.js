@@ -28,7 +28,6 @@ export default class Search extends Component {
     render() {
         return (
             <div>
-
                 <Nav />
                 <Results query={this.state.query} api={this.props.api} />
             </div>
