@@ -53,13 +53,11 @@ class Results extends Component {
       label.map(i => {
         if(i.size.label === "Thumbnail")
         {
-
           size.width = i.width;
           size.heght = i.heght;
         }
         else
         {
-
           size.width = 340;
           size.heght = 250;
         };

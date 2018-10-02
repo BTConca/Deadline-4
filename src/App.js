@@ -8,7 +8,7 @@ import Search from './Search.js';
 
 // Get a Flickr API key
 
-import apiKey from './config.js';
+import apiKey from './myconfig.js';
 import NotFound from './NotFound.js';
 
 const App = () =>{
