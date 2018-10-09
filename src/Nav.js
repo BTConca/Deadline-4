@@ -11,10 +11,18 @@ const bg =  {
 }
 
 const Nav = () => {
-
         return (
             <div>
                 <nav className="main-nav" style={bg}>
+                <ul>
+
+                    <li>
+                      <Link to = "/">Exlore</Link>
+                    </li>
+                    <li>
+                      <Link to = "/search">Search</Link>
+                    </li>
+                </ul>
                 1512250
                 </nav>
             </div>

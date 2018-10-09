@@ -5,7 +5,7 @@ import NoResults from './NoResults.js';
 import Loading from './Flickr.svg';
 import 'intersection-observer';
 import Gallery from 'react-grid-gallery';
-
+import {Link, Redirect} from 'react-router-dom';
 // Build your app components according to the provided mockup.
 // Most components should be stateless functional components that focus on the UI rather than behavior.You’ll need:
 
@@ -28,8 +28,10 @@ class Results extends Component {
             loading: false,
             page: 1,
             prevY: 0,
-            nextHref : null
+            redirect: false,
+            curImage :0
         }
+        this.onClick = this.onClick.bind(this);
     }
 
 
@@ -67,6 +69,35 @@ class Results extends Component {
     );
     }
 
+    syncItems()
+    {
+      var tracks = [];
+      this.state.photos.map(track => {
+
+      track.src = `https://farm${track.farm}.staticflickr.com/${track.server}/${track.id}_${track.secret}.jpg`;
+      track.thumbnail = `https://farm${track.farm}.staticflickr.com/${track.server}/${track.id}_${track.secret}_m.jpg`;
+      var size = this.getSize(track.id);
+      track.thumbnailWidth = size.width;
+      track.thumbnailHeight = size.height;
+      track.customOverlay = (
+        <div key = {track.id} style={captionStyle}>
+        <div>{track.title}</div>
+        <div
+        style={customTitle}>
+        owner : {track.owner}
+        </div>
+        <div
+        style={customTitle}>
+        Views : {track.id % 3}
+        </div>
+        </div>);
+      tracks.push(track);
+      });
+      this.setState({
+        photos : tracks
+      });
+    };
+
     loadItems(page) {
       this.setState(
         {
@@ -79,34 +110,28 @@ class Results extends Component {
                         photos: [... this.state.photos,...response.data.photos.photo],
                         loading: false
                     });
-                    var tracks = [];
-                    this.state.photos.map(track => {
-
-                    track.src = `https://farm${track.farm}.staticflickr.com/${track.server}/${track.id}_${track.secret}.jpg`;
-                    track.thumbnail = `https://farm${track.farm}.staticflickr.com/${track.server}/${track.id}_${track.secret}_m.jpg`;
-                    var size = this.getSize(43202453550);
-                    track.thumbnailWidth = size.width;
-                    track.thumbnailHeight = size.height;
-                    track.customOverlay = (
-                      <div key = {track.id} style={captionStyle}>
-                      <div>{track.title}</div>
-                      <div
-                      style={customTitle}>
-                      owner : {track.owner}
-                      </div>
-                      <div
-                      style={customTitle}>
-                      Views : {track.id % 3}
-                      </div>
-                          </div>);
-                    tracks.push(track);
-                    });
-                    this.setState({
-                      photos : tracks
-                    });
-
+                    this.syncItems();
                 }
-            );
+            )
+            .catch(error => {
+                console.log('Error fetching and parsing data', error);
+            });
+    }
+
+    searchItems(tag)
+    {
+      axios.get(`https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=${this.props.api}&tags=${this.props.query}&per_page=16&format=json&nojsoncallback=1`)
+          .then(response => {
+              this.setState({
+                  keyword: this.props.query,
+                  photos: response.data.photos.photo,
+                  loading: false
+              })
+              this.syncItems();
+          })
+          .catch(error => {
+              console.log('Error fetching and parsing data', error);
+          });
     }
 
 
@@ -122,8 +147,14 @@ class Results extends Component {
   }
 
     componentDidMount() {
-      this.loadItems(this.state.page);
-
+      if( this.props.query === "")
+      {
+        this.loadItems(this.state.page);
+      }
+      else
+      {
+        this.searchItems(this.props.query);
+      }
       var options = {
         root: null, // Page as root
         rootMargin: '0px',
@@ -137,21 +168,49 @@ class Results extends Component {
 
       this.observer.observe(this.loadingRef);
     }
-    // Fetch the data from Flickr API.
-    // Make sure data fetching and state is managed by a higher- level “container” component.
+
+    componentWillReceiveProps(newProps) {
+        this.setState({ keyword: newProps.query });
+        this.performSearch(newProps.query);
+    }
+
+    performSearch = (query) => {
+        axios.get(`https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=${this.props.api}&tags=${query}&per_page=16&format=json&nojsoncallback=1`)
+            .then(response => {
+                this.setState({
+                    photos: response.data.photos.photo,
+                    loading: false
+                });
+                this.syncItems();
+            })
+            .catch(error => {
+                console.log('Error fetching and parsing data', error);
+            });
+    }
 
 
-    setCustomTags (i) {
+    onClick= (index) => {
+      this.setState({
+        redirect :true,
+        curPage : index
+      })
+    }
 
-                    return (<div
-                            key={i.id}>
-                            <div
-                            style={customTitle}>
-                            Title : {i.Owner}
-                            </div>
-                            </div>
-                          );
-        };
+    renderRedirect = () => {
+      const index = this.state.curPage;
+      if (this.state.redirect) {
+        return (
+          <div>
+          <img src={this.state.photos[index].src} alt="" key={this.state.photos[index].id} />
+          <a>{index}</a>
+          <Redirect to={{
+            pathname: '/photo',
+            id: this.state.photos[index].id,
+            src :  this.state.photos[index].src
+        }}/>
+        </div>);//<Redirect to='/photo'/>);
+      }
+  }
 
     render() {
 
@@ -166,6 +225,7 @@ class Results extends Component {
 
                 return (
                   <div className="container">
+                  {this.renderRedirect()}
                   <div style={{
                     display: "block",
                     minHeight: "1px",
@@ -174,7 +234,10 @@ class Results extends Component {
                     overflow: "auto"}}>
                 <Gallery
             images={this.state.photos}
-            enableImageSelection={false}/>
+            enableImageSelection={false}
+            enableLightbox = {false}
+            onClickThumbnail = {this.onClick}
+            />
                 </div>
                     <div
                     ref={loadingRef => (this.loadingRef = loadingRef)}
@@ -186,6 +249,17 @@ class Results extends Component {
                   );
     }
 }
+
+Results.propTypes = {
+    images: PropTypes.arrayOf(
+        PropTypes.shape({
+        src: PropTypes.string.isRequired,
+         thumbnail: PropTypes.string.isRequired,
+         thumbnailWidth: PropTypes.number.isRequired,
+         thumbnailHeight: PropTypes.number.isRequired
+        })
+    ).isRequired
+};
 
 const captionStyle = {
     backgroundColor: "rgba(0, 0, 0, 0.8)",
@@ -199,16 +273,6 @@ const captionStyle = {
     fontSize: "90%"
 };
 
-Results.propTypes = {
-    images: PropTypes.arrayOf(
-        PropTypes.shape({
-        src: PropTypes.string.isRequired,
-         thumbnail: PropTypes.string.isRequired,
-         thumbnailWidth: PropTypes.number.isRequired,
-         thumbnailHeight: PropTypes.number.isRequired
-        })
-    ).isRequired
-};
 
 const customTitle = {
     wordWrap: "break-word",

@@ -28,6 +28,12 @@ export default class Search extends Component {
     render() {
         return (
             <div>
+                <form className="search-form" onSubmit={this.handleSubmit}>
+                    <input type="search" name="search" placeholder="Search" onChange={this.onSearchChange} />
+                    <button type="submit" className="search-button">
+                        <img src={icon} alt="search icon" />
+                    </button>
+                </form>
                 <Nav />
                 <Results query={this.state.query} api={this.props.api} />
             </div>
